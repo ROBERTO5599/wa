@@ -26,6 +26,8 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { HooksModule } from './core/hooks';
 import { PluginsModule } from './core/plugins';
 import { PluginsApiModule } from './modules/plugins/plugins.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 // Only import QueueModule if explicitly enabled to avoid Redis connection errors
 const queueModules: Array<Type | DynamicModule> = [];
@@ -43,6 +45,12 @@ if (process.env.QUEUE_ENABLED === 'true') {
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+    }),
+
+    // Serve static dashboard files
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'dashboard', 'dist'),
+      exclude: ['/api/(.*)'],
     }),
 
     // Main Database (always SQLite - boot config)

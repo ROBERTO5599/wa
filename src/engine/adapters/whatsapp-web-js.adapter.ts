@@ -42,6 +42,8 @@ export interface WhatsAppWebJsConfig {
   puppeteer?: {
     headless?: boolean;
     args?: string[];
+    executablePath?: string;
+    browserWSEndpoint?: string;
   };
   // Phase 3: Proxy per session
   proxy?: {
@@ -70,7 +72,7 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
     try {
       // Build puppeteer args, including proxy if configured
-      const puppeteerArgs = this.config.puppeteer?.args || [
+      const puppeteerArgs = [...(this.config.puppeteer?.args || [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -78,7 +80,7 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
-      ];
+      ])];
 
       // Add proxy configuration if provided
       if (this.config.proxy) {
@@ -86,6 +88,14 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
         this.logger.log(
           `Using proxy: ${this.config.proxy.type}://${this.config.proxy.url.replace(/:[^:@]*@/, ':***@')}`,
         );
+      }
+
+      // Anti-detection options to avoid blocks and session logouts
+      if (!puppeteerArgs.includes('--disable-blink-features=AutomationControlled')) {
+        puppeteerArgs.push('--disable-blink-features=AutomationControlled');
+      }
+      if (!puppeteerArgs.some(arg => arg.startsWith('--user-agent='))) {
+        puppeteerArgs.push('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
       }
 
       this.client = new Client({
@@ -96,7 +106,10 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
         puppeteer: {
           headless: this.config.puppeteer?.headless ?? true,
           args: puppeteerArgs,
+          executablePath: this.config.puppeteer?.executablePath,
+          browserWSEndpoint: this.config.puppeteer?.browserWSEndpoint,
         },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       });
 
       this.setupEventHandlers();
