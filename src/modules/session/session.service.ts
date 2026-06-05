@@ -16,6 +16,8 @@ import { createLogger } from '../../common/services/logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface ReconnectState {
   attempts: number;
@@ -178,6 +180,25 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     await this.dataSource.transaction(async manager => {
       await manager.remove(session);
     });
+
+    // Delete session files from disk to prevent session lockout on recreate
+    const sessionDataPath = process.env.SESSION_DATA_PATH || './data/sessions';
+    const sessionDir = path.resolve(sessionDataPath, 'session-' + session.name);
+    try {
+      if (fs.existsSync(sessionDir)) {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+        this.logger.log(`Deleted session files from disk: ${sessionDir}`, {
+          sessionId: id,
+          action: 'delete_files',
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to delete session files: ${sessionDir}`, String(err), {
+        sessionId: id,
+        action: 'delete_files_failed',
+      });
+    }
+
     this.logger.log(`Session deleted: ${session.name}`, {
       sessionId: id,
       action: 'delete',
