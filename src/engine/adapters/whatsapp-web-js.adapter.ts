@@ -103,6 +103,10 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
           clientId: this.config.sessionId,
           dataPath: path.resolve(this.config.sessionDataPath),
         }),
+        webVersionCache: {
+          type: 'remote',
+          remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1045323241-alpha.html',
+        },
         puppeteer: {
           headless: this.config.puppeteer?.headless ?? true,
           args: puppeteerArgs,
@@ -301,6 +305,19 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
   async sendTextMessage(chatId: string, text: string): Promise<MessageResult> {
     this.ensureReady();
     const resolvedChatId = await this.resolveChatId(chatId);
+
+    // Simula comportamiento humano: "escribiendo..." antes de enviar
+    try {
+      const chat = await this.client!.getChatById(resolvedChatId);
+      await chat.sendStateTyping();
+      // Tiempo de escritura proporcional al largo del mensaje (mínimo 1s, máximo 6s)
+      const typingMs = Math.min(6000, Math.max(1000, text.length * 40));
+      await new Promise(r => setTimeout(r, typingMs));
+      await chat.clearState();
+    } catch {
+      // Si no se puede simular typing, continúa igual
+    }
+
     const msg = await this.client!.sendMessage(resolvedChatId, text);
     return {
       id: msg.id._serialized,

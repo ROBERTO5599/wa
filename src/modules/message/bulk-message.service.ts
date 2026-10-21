@@ -50,7 +50,7 @@ export class BulkMessageService {
     }
 
     const options = {
-      delayBetweenMessages: dto.options?.delayBetweenMessages ?? 3000,
+      delayBetweenMessages: dto.options?.delayBetweenMessages ?? 15000,
       randomizeDelay: dto.options?.randomizeDelay ?? true,
       stopOnError: dto.options?.stopOnError ?? false,
     };
@@ -288,7 +288,9 @@ export class BulkMessageService {
   private calculateDelay(options: { delayBetweenMessages: number; randomizeDelay: boolean }): number {
     let delay = options.delayBetweenMessages;
     if (options.randomizeDelay) {
-      delay += Math.random() * 2000; // Add 0-2 seconds random
+      // Variación amplia para simular comportamiento humano
+      delay += Math.random() * 10000 - 5000; // ±5 segundos
+      delay = Math.max(delay, 8000); // mínimo 8 segundos siempre
     }
     return delay;
   }
